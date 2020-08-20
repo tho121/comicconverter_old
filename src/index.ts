@@ -34,7 +34,7 @@ const fm_third = 'third'; // I will make it later
 var notebookTools: INotebookTools;
 const img = 'img';
 
-const mouseActionTimeSeparation = 5;
+const mouseActionTimeSeparation = 25;
 
 var mouseActionsArray: MouseActions[];
 //var notebookTracker: INotebookTracker;
@@ -80,8 +80,6 @@ class MouseActions {
                 cells.get(i).metadata.set("relativeMousePosYArray", this.relativeMousePosYArray);
                 cells.get(i).metadata.set("childIndexArray", this.childIndexArray);
                 cells.get(i).metadata.set("mouseClickTrails", this.mouseClickTrails);
-
-                cells.get(i).metadata.set("mouseActionTimeSeparation", (mouseActionTimeSeparation + 40) * this.mouseEventType.length);
                 //exit out
                 return;
             }
@@ -144,55 +142,31 @@ const extension: JupyterFrontEndPlugin<void> = {
 
                 setTimeout(function () {
                     var codeCell = (<CodeCell>args.cell);
-
                     queuedMouseActions.push(codeCell.model.id);
                     queuedEventsElement.push(codeCell.outputArea.node);
 
                     if (queuedMouseActions.length > 0 && !isDispatchingEvents) {
                         dispatchEvents();
+
+                        var myLoop = function () {
+                            setTimeout(function () {
+                                if (!isDispatchingEvents) {
+                                    applyCodeFrame(codeCell);
+                                    return;
+                                }
+                                myLoop();
+                            }, 500);
+                        }
+
+                        myLoop();
+                    }
+                    else {
+                        applyCodeFrame(codeCell);
                     }
 
                 }, 1000);
             }
-
-            var cell = args.cell;
-            if (cell.model.type == 'code') {
-                if (IsComicCell(cell)) {
-
-                    var element = getOutputAreaElements(cell.node);
-
-                    element.frame.setAttribute('style', '');
-                    element.frame.parentElement.parentElement.parentElement.setAttribute('style', '');
-
-                    let delay = -1;
-
-                    if (cell.model.metadata.has("comicFrameDelay")) {
-                        delay = cell.model.metadata.get("comicFrameDelay").valueOf() as number;
-                    }
-                    else {
-                        cell.model.metadata.set("comicFrameDelay", delay);
-                    }
-
-                    if (delay < 0) {
-
-                        if (cell.model.metadata.has("mouseActionTimeSeparation")) {
-                            delay = cell.model.metadata.get("mouseActionTimeSeparation").valueOf() as number;
-                        }
-                        else {
-                            cell.model.metadata.set("mouseActionTimeSeparation", delay);
-                        }
-
-                        delay += 1200;
-                    }
-
-                    setTimeout(() => {
-                        formatOutputArea(cell, showingComic)
-                        element.frame.scrollIntoView(true);
-                    }, delay);
-                }
-            }
         });
-
 
         commands.addCommand(comicCommand, {
             label: 'Comic Command',
@@ -248,7 +222,6 @@ const extension: JupyterFrontEndPlugin<void> = {
             }
         });
 
-
         let showingIntermediate = false;
 
         commands.addCommand(intermediate, {
@@ -285,6 +258,16 @@ const extension: JupyterFrontEndPlugin<void> = {
     }
 };
 
+function applyCodeFrame(codeCell: CodeCell) {
+    if (IsComicCell(codeCell)) {
+        var element = getOutputAreaElements(codeCell.node);
+        element.frame.setAttribute('style', '');
+        element.frame.parentElement.parentElement.parentElement.setAttribute('style', '');
+        formatOutputArea(codeCell, showingComic);
+        element.frame.scrollIntoView(true);
+    }
+}
+
 function IsComicCell(cell: Cell): boolean {
     if (cell !== undefined) {
         let tags = cell.model.metadata.get('tags') as string[];
@@ -298,6 +281,8 @@ function IsComicCell(cell: Cell): boolean {
 
     return false;
 }
+
+
 
 
 // here you use boolean then i can't not disitinguish tags 
