@@ -149,8 +149,6 @@ const extension: JupyterFrontEndPlugin<void> = {
 
                 showingComic = !showingComic;
 
-                //notebook.activeCell.node.scrollIntoView(true);
-
                 let cellWidgets = notebook.activeNotebookPanel.content.widgets;
 
                 for (let i = 0; i < cellWidgets.length; ++i) {
@@ -194,6 +192,8 @@ const extension: JupyterFrontEndPlugin<void> = {
                         }
                     }
                 }
+
+                notebook.activeCell.node.scrollIntoView(true);
             }
         });
 
@@ -223,6 +223,8 @@ const extension: JupyterFrontEndPlugin<void> = {
                         }
                     }
                 }
+
+                notebook.activeCell.node.scrollIntoView(true);
             }
         });
 
