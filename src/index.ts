@@ -7,7 +7,7 @@ import { IMainMenu } from '@jupyterlab/mainmenu';
 //import { PanelLayout, Widget } from '@lumino/widgets';
 
 import {
-    INotebookTools, NotebookActions, NotebookPanel, INotebookModel
+    INotebookTools, NotebookActions, NotebookPanel, INotebookModel, Notebook
 } from '@jupyterlab/notebook';
 
 import { Cell, CodeCell } from '@jupyterlab/cells';
@@ -125,8 +125,12 @@ const extension: JupyterFrontEndPlugin<void> = {
 
         notebookTools = notebook;
 
-        var newButtonExtension = new ButtonExtension();
-        app.docRegistry.addWidgetExtension('Notebook', newButtonExtension);
+        var toggleButton = new ToggleInputCodeButton();
+        app.docRegistry.addWidgetExtension('Notebook', toggleButton);
+
+        var resetButton = new ResetButton();
+        app.docRegistry.addWidgetExtension('Notebook', resetButton);
+        
 
         var newCaptureEventButtonExtension = new CaptureEventsButtonExtension();
         app.docRegistry.addWidgetExtension('Notebook', newCaptureEventButtonExtension);
@@ -135,39 +139,8 @@ const extension: JupyterFrontEndPlugin<void> = {
         queuedEventsElement = new Array();
         queuedMouseActions = new Array();
 
-        NotebookActions.executed.connect((slot, args) => {
-
-            if (args.cell.model.type == 'code') {
-                console.log("dispatching events");
-
-                setTimeout(function () {
-                    var codeCell = (<CodeCell>args.cell);
-                    queuedMouseActions.push(codeCell.model.id);
-                    queuedEventsElement.push(codeCell.outputArea.node);
-
-                    if (queuedMouseActions.length > 0 && !isDispatchingEvents) {
-                        dispatchEvents();
-
-                        var myLoop = function () {
-                            setTimeout(function () {
-                                if (!isDispatchingEvents) {
-                                    applyCodeFrame(codeCell);
-                                    return;
-                                }
-                                myLoop();
-                            }, 500);
-                        }
-
-                        myLoop();
-                    }
-                    else {
-                        applyCodeFrame(codeCell);
-                    }
-
-                }, 1000);
-            }
-        });
-
+        NotebookActions.executed.connect(onCellExecute);
+        
         commands.addCommand(comicCommand, {
             label: 'Comic Command',
             isToggled: () => showingComic,
@@ -175,6 +148,8 @@ const extension: JupyterFrontEndPlugin<void> = {
                 console.log(`Executed ${comicCommand}`);
 
                 showingComic = !showingComic;
+
+                //notebook.activeCell.node.scrollIntoView(true);
 
                 let cellWidgets = notebook.activeNotebookPanel.content.widgets;
 
@@ -257,6 +232,36 @@ const extension: JupyterFrontEndPlugin<void> = {
         }
     }
 };
+
+function onCellExecute(slot:any, args: {
+    notebook: Notebook;
+    cell: Cell;
+}) {
+    if (args.cell.model.type == 'code') {
+        console.log("dispatching events");
+        setTimeout(function() {
+            var codeCell = (<CodeCell>args.cell);
+            queuedMouseActions.push(codeCell.model.id);
+            queuedEventsElement.push(codeCell.outputArea.node);
+            if (queuedMouseActions.length > 0 && !isDispatchingEvents) {
+                dispatchEvents();
+                var myLoop = function() {
+                    setTimeout(function() {
+                        if (!isDispatchingEvents) {
+                            applyCodeFrame(codeCell);
+                            return;
+                        }
+                        myLoop();
+                    }, 500);
+                };
+                myLoop();
+            }
+            else {
+                applyCodeFrame(codeCell);
+            }
+        }, 1000);
+    }
+}
 
 function applyCodeFrame(codeCell: CodeCell) {
     if (IsComicCell(codeCell)) {
@@ -532,7 +537,7 @@ function formatOutputArea(cell: Cell, showComicView: boolean) {
     }
 }
 
-export class ButtonExtension implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel> {
+export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel> {
 
     private previousCell: Cell;
 
@@ -625,6 +630,45 @@ export class ButtonExtension implements DocumentRegistry.IWidgetExtension<Notebo
         });
     }
 }
+
+function reconnectCellExecution() {
+
+    NotebookActions.executed.disconnect(reconnectCellExecution);
+    NotebookActions.executed.connect(onCellExecute);
+}
+
+export class ResetButton implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel> {
+
+    createNew(panel: NotebookPanel, context: DocumentRegistry.IContext<INotebookModel>): IDisposable {
+
+        let callback = () => {
+
+            let cellId = panel.content.activeCell.model.id;
+
+            let ma = getMouseActions(cellId);
+            ma.reset();
+            ma.updateMetadata();
+
+            NotebookActions.executed.disconnect(onCellExecute);
+            NotebookActions.executed.connect(reconnectCellExecution);
+
+            NotebookActions.run(panel.content, panel.sessionContext);
+        };
+
+        let button = new ToolbarButton({
+            className: 'reset',
+            iconClass: 'fa fa-fast-forward',
+            onClick: callback,
+            tooltip: 'Reset cell'
+        });
+
+        panel.toolbar.insertItem(1, 'reset', button);
+        return new DisposableDelegate(() => {
+            button.dispose();
+        });
+    }
+}
+
 
 //action replay
 
@@ -970,8 +1014,8 @@ export class CaptureEventsButtonExtension implements DocumentRegistry.IWidgetExt
 
         //let button = recordButton;
 
-        panel.toolbar.insertItem(0, 'record', recordButton);
-        panel.toolbar.insertItem(1, 'stop', stopButton);
+        panel.toolbar.insertItem(2, 'record', recordButton);
+        panel.toolbar.insertItem(3, 'stop', stopButton);
         return new DisposableDelegate(() => {
             recordButton.dispose();
             stopButton.dispose();
