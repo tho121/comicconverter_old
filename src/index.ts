@@ -22,6 +22,13 @@ import {
     IDisposable, DisposableDelegate
 } from '@lumino/disposable';
 
+import {
+    searchIcon,
+    refreshIcon,
+    addIcon,
+    stopIcon,
+} from '@jupyterlab/ui-components';
+
 /**
  * Initialization data for the hello_world extension.
  */
@@ -621,7 +628,7 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
 
         let button = new ToolbarButton({
             className: 'showCode',
-            iconClass: 'fa fa-fast-forward',
+            icon: searchIcon,
             onClick: callback,
             tooltip: 'Show Comic code'
         });
@@ -659,7 +666,7 @@ export class ResetButton implements DocumentRegistry.IWidgetExtension<NotebookPa
 
         let button = new ToolbarButton({
             className: 'reset',
-            iconClass: 'fa fa-fast-forward',
+            icon: refreshIcon,
             onClick: callback,
             tooltip: 'Reset cell'
         });
@@ -1002,19 +1009,18 @@ export class CaptureEventsButtonExtension implements DocumentRegistry.IWidgetExt
 
         let recordButton = new ToolbarButton({
             className: 'record',
-            iconClass: 'fa fa-fast-forward',
+            icon: addIcon,
             onClick: recordingCallback,
             tooltip: 'record actions'
         });
 
         let stopButton = new ToolbarButton({
             className: 'stop',
-            iconClass: 'fa fa-fast-forward',
+            icon: stopIcon,
             onClick: stopRecordingCallback,
             tooltip: 'stop recording'
         });
 
-        //let button = recordButton;
 
         panel.toolbar.insertItem(2, 'record', recordButton);
         panel.toolbar.insertItem(3, 'stop', stopButton);
