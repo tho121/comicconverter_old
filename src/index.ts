@@ -35,6 +35,7 @@ import {
 
 const comicTag = 'comic';
 const intermediateTag = 'intermediate';
+const md_bottom = 'bottom';
 const fm_fullWidth = 'full';
 const fm_half = 'half';
 const fm_third = 'third'; // I will make it later 
@@ -296,6 +297,19 @@ function IsComicCell(cell: Cell): boolean {
     return false;
 }
 
+function IsBottomMarkdown(cell: Cell): boolean {
+    if (cell !== undefined) {
+        let tags = cell.model.metadata.get('tags') as string[];
+
+        if (tags) {
+            if (tags.find((tag) => tag == md_bottom)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
 
 
 
@@ -415,12 +429,18 @@ function hide_matplot_executeResult(frame: any) {
 };
 
 
-function markdownFunction(markdown: any) {
+function markdownFunction(markdown: HTMLElement, isBottom: boolean) {
     var text = markdown.firstChild.nextSibling.lastChild.childNodes[2].textContent;
+
+    let verticalPos = "top:0px;";
+
+    if (isBottom) {
+        verticalPos = "bottom:0px;";
+    }
 
     var annotationbox = document.createElement('p');
     annotationbox.innerText = text;
-    annotationbox.style.cssText = "color: black; border:1px solid black; z-index:1; background-color:white; width: auto; height:auto; position:absolute !important; top:0px; margine:4px; font-size: large;";
+    annotationbox.style.cssText = "color: black; border:1px solid black; z-index:1; background-color:white; width: auto; height:auto; position:absolute !important; margine:4px; font-size: large;" + verticalPos;
     annotationbox.setAttribute('class', 'annobox');
 
     return annotationbox;
@@ -511,7 +531,7 @@ function formatOutputArea(cell: Cell, showComicView: boolean) {
             var markdown = markdownCell.node;
 
             //appending markdown
-            frame.firstChild.after(markdownFunction(markdown));
+            frame.firstChild.after(markdownFunction(markdown, IsBottomMarkdown(markdownCell)));
         }
     }
     else {  //reset to notebook view
