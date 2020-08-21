@@ -25,7 +25,7 @@ import {
 import {
     searchIcon,
     refreshIcon,
-    addIcon,
+    editIcon,
     stopIcon,
 } from '@jupyterlab/ui-components';
 
@@ -1009,7 +1009,7 @@ export class CaptureEventsButtonExtension implements DocumentRegistry.IWidgetExt
 
         let recordButton = new ToolbarButton({
             className: 'record',
-            icon: addIcon,
+            icon: editIcon,
             onClick: recordingCallback,
             tooltip: 'record actions'
         });
