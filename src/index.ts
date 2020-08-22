@@ -584,9 +584,6 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
 
                         var inputArea = elements.arr;
                         var frame = elements.frame;
-                        //var codecell = elements.codecell;
-
-                        //var inputArea = [cell.node.getElementsByClassName('jp-Cell-inputWrapper')];
                         var codeArea = elements.codecell;
 
                         //toggle code area and annobox depending if the code area is currently showing or not
@@ -596,13 +593,18 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
                             isCodeShowing = true;
                         }
 
-                        if (!isCodeShowing) {
+                        var markdown = findCorrespondingMarkdownCell(cell);
+
+                        if (!isCodeShowing) {   //in comic view, show code
                             frame.setAttribute('style', '');
                             frame.parentElement.parentElement.parentElement.setAttribute('style', '');
                             frame.firstElementChild.setAttribute('style', 'display:;'); //show prompt
+
+                            markdown?.show();
                         }
                         else {
                             set_frameStyle(frame, getComicWidth(cell));
+                            markdown?.hide();
                         }
 
                         isCodeShowing ? codeArea.setAttribute("style", "display: none;") : codeArea.setAttribute("style", "display: ;");
