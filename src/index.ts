@@ -38,7 +38,9 @@ const intermediateTag = 'intermediate';
 const md_bottom = 'bottom';
 const fm_fullWidth = 'full';
 const fm_half = 'half';
-const fm_third = 'third'; // I will make it later 
+const fm_third = 'third'; 
+const fm_twothird = 'twothird';
+
 var notebookTools: INotebookTools;
 const img = 'img';
 
@@ -328,6 +330,9 @@ function getComicWidth(cell: Cell): string {
             }
             else if (tags.find((tag) => tag == fm_third)) {
                 return fm_third;
+            } else if (tags.find((tag)=> tag == fm_twothird)) {
+                return fm_twothird;
+
             }
         }
     }
@@ -393,12 +398,16 @@ function set_frameStyle(frame: Element, tag: string) {
         frame.setAttribute('style', 'background-color:white; border : solid 2px; width:100%; height:100%; overflow:hidden; position:relative; margin: 0px !important; float:left; ');
     }
     else if (tag == fm_third) {
-        //frame.parentElement.parentElement.parentElement.setAttribute('style', 'width:32%; position:relative; float:left; resize:both; overflow:hidden; height:auto;');
-        frame.parentElement.parentElement.parentElement.style.width = '32%';
+        //frame.parentElement.parentElement.parentElement.setAttribute('style','width:32%; position:relative; float:left; resize:both; overflow:hidden; height:auto;');
+        frame.parentElement.parentElement.parentElement.style.width = '33.3%';
         frame.setAttribute('style', 'background-color:white; border : solid 2px; width:100%; height:100%; overflow:hidden; position:relative; margin: 0px !important; float:left; ');
     }
+    else if (tag == fm_twothird) {
+        frame.parentElement.parentElement.parentElement.style.width = '66.6%';
+        frame.setAttribute('style', 'background-color:white; border:solid 2px; width:100%; height:100%; overflow:hidden; position:relative; margin:0px !important;  float:left');
+    }
     else {  //if (tag == fm_half)
-        frame.parentElement.parentElement.parentElement.style.width = '45%';
+        frame.parentElement.parentElement.parentElement.style.width = '50%';
         //frame.parentElement.parentElement.parentElement.setAttribute('style', 'width:45%; position:relative; float:left; resize:both; overflow:hidden; height:auto;');
         frame.setAttribute('style', 'background-color:white; border : solid 2px; width:100%; height:100%; overflow:hidden; position:relative; margin: 0px !important; float:left; ');
     }
