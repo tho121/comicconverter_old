@@ -36,6 +36,7 @@ import {
 const comicTag = 'comic';
 const intermediateTag = 'intermediate';
 const md_bottom = 'bottom';
+const md_stack = 'stack';
 const fm_fullWidth = 'full';
 const fm_half = 'half';
 const fm_third = 'third'; 
@@ -313,6 +314,20 @@ function IsBottomMarkdown(cell: Cell): boolean {
     return false;
 }
 
+function IsMarkdownStacked(cell: Cell): boolean {
+    if (cell !== undefined) {
+        let tags = cell.model.metadata.get('tags') as string[];
+
+        if (tags) {
+            if (tags.find((tag) => tag == md_stack)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 
 
 // here you use boolean then i can't not disitinguish tags 
@@ -539,8 +554,20 @@ function formatOutputArea(cell: Cell, showComicView: boolean) {
         if (markdownCell != null) {
             var markdown = markdownCell.node;
 
+            let isBottom = IsBottomMarkdown(markdownCell);
+            let markdownElement = markdownFunction(markdown, isBottom);
             //appending markdown
-            frame.firstChild.after(markdownFunction(markdown, IsBottomMarkdown(markdownCell)));
+            frame.firstChild.after(markdownElement);
+
+            if (IsMarkdownStacked(markdownCell)) {
+
+                if (isBottom) {
+                    frame.getElementsByClassName("jp-OutputArea-output").item(0).setAttribute('style', "width:100%;overflow: hidden; margin-bottom:" + markdownElement.clientHeight + "px;");
+                }
+                else {
+                    frame.getElementsByClassName("jp-OutputArea-output").item(0).setAttribute('style', "width:100%;overflow: hidden; margin-top:" + markdownElement.clientHeight + "px;");
+                }
+            }
         }
     }
     else {  //reset to notebook view
