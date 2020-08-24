@@ -568,6 +568,9 @@ function formatOutputArea(cell: Cell, showComicView: boolean) {
                     frame.getElementsByClassName("jp-OutputArea-output").item(0).setAttribute('style', "width:100%;overflow: hidden; margin-top:" + markdownElement.clientHeight + "px;");
                 }
             }
+
+            //hide markdown cell if we're showing the comic view
+            markdownCell.hide();
         }
     }
     else {  //reset to notebook view
