@@ -164,7 +164,8 @@ const extension: JupyterFrontEndPlugin<void> = {
 
         notebookTracker.currentChanged.connect(() => {
             setTimeout(() => {
-                notebookTracker.currentWidget.node.parentElement.style.width = "1000px";
+
+                //notebookTracker.currentWidget.node.parentElement.style.width = "1000px";
             }, 10000);
         });
 
@@ -216,6 +217,20 @@ const extension: JupyterFrontEndPlugin<void> = {
                             cell.node.style.setProperty('display', 'none');
                         } else {
                             cell.node.style.setProperty('display', '');
+                        }
+                    }
+                }
+
+                if (showingComic) {
+
+                    for (let i = 0; i < cellWidgets.length; ++i) {
+
+                        var cell = cellWidgets[i];
+
+                        if (IsComicCell(cell) && cell.model.type == 'code') {
+                            var elements = getOutputAreaElements(cell.node);
+
+                            fixComicLayout(elements.output_arr[0].item(0).parentElement as HTMLElement, cell);
                         }
                     }
                 }
@@ -485,8 +500,8 @@ function graph_responsive(frame: any) {
     frame.firstElementChild.nextElementSibling.setAttribute('style', 'width:100%;overflow: hidden;');
 }
 
-//assumes previous cells already have frames applied
-function setFlushBottom(notebookCellElement: HTMLElement, cell: Cell) {
+//assumes comic frames have been applied to all cells
+function fixComicLayout(notebookCellElement: HTMLElement, cell: Cell) {
 
     let cells = notebookTools.activeNotebookPanel.content.widgets;
 
@@ -527,13 +542,11 @@ function setFlushBottom(notebookCellElement: HTMLElement, cell: Cell) {
     if (heightDiff > 0) {
         if (heightDiff > nextNodeHeight / 2) {
 
-            let bottomMargin = (cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight) - (notebookCellElement.offsetTop + notebookCellElement.clientHeight) + 1;
+            let bottomMargin = (cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight) - (notebookCellElement.offsetTop + notebookCellElement.clientHeight) + 1.5;
 
             notebookCellElement.style.marginBottom = "" + bottomMargin + "px";
         }
         else {
-
-            heightDiff += 1;
             cells[leftCellIndex].node.style.marginBottom = "" + heightDiff + "px"
         }
     }
@@ -636,8 +649,6 @@ function formatOutputArea(cell: Cell, showComicView: boolean) {
             //hide markdown cell if we're showing the comic view
             markdownCell.hide();
         }
-
-        setFlushBottom(frame.parentElement.parentElement.parentElement, cell);
     }
     else {  //reset to notebook view
 
@@ -675,6 +686,8 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
 
     //private previousCell: Cell;
 
+    private previousMargin = "";
+
     createNew(panel: NotebookPanel, context: DocumentRegistry.IContext<INotebookModel>): IDisposable {
 
         let callback = () => {
@@ -704,6 +717,9 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
                         var markdown = findCorrespondingMarkdownCell(cell);
 
                         if (!isCodeShowing) {   //in comic view, show code
+
+                            this.previousMargin = elements.output_arr[0].item(0).parentElement.style.marginBottom;
+
                             frame.setAttribute('style', '');
                             frame.parentElement.parentElement.parentElement.setAttribute('style', '');
                             frame.firstElementChild.setAttribute('style', 'display:;'); //show prompt
@@ -713,13 +729,13 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
                         else {
                             set_frameStyle(frame, getComicWidth(cell));
                             markdown?.hide();
+
+                            elements.output_arr[0].item(0).parentElement.style.marginBottom = this.previousMargin;
                         }
 
                         isCodeShowing ? codeArea.setAttribute("style", "display: none;") : codeArea.setAttribute("style", "display: ;");
 
-                        var output_arr = [cell.node.getElementsByClassName('jp-Cell-outputWrapper')];
-
-                        for (var node of output_arr[0].item(0).getElementsByClassName('jp-OutputArea-child').item(0).children) {
+                        for (var node of frame.children) {
                             if (node.className == 'annobox') {
 
                                 var currentStyle = node.getAttribute('style');
