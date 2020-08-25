@@ -369,7 +369,6 @@ function IsImageCell(cell: Cell): boolean {
     return false;
 }
 
-
 function img_cell_formatting(frame: any, cell: Cell) {
 
     if (IsImageCell(cell)) {
@@ -379,15 +378,8 @@ function img_cell_formatting(frame: any, cell: Cell) {
         console.log('img[0] : ', img[0]);
         console.log('img child : ', img[0].firstElementChild);
         img[0].firstElementChild.setAttribute('style', 'width:100%; height:100%; object - fit: cover;');
-
-
-
-
     }
-
 }
-
-
 
 function IsIntermediateCell(cell: Cell): boolean {
     if (cell !== undefined) {
@@ -404,29 +396,36 @@ function IsIntermediateCell(cell: Cell): boolean {
 }
 
 //frame.parentElement.parentElement.parentElement = jp-Notebook-cell
-function set_frameStyle(frame: Element, tag: string) {
+function set_frameStyle(frame: HTMLElement, tag: string) {
 
-    frame.parentElement.parentElement.parentElement.setAttribute('style', 'width:100%; position:relative; float:left; resize:both; overflow:hidden; height:auto;');
+    let notebookCell = frame.parentElement.parentElement.parentElement;
+
+    notebookCell.setAttribute('style', 'width:100%; position:relative; float:left; resize:both; overflow:hidden; height:auto;');
+
+    //frame.setAttribute('style', 'background-color:white; border : solid 2px; width:100%; height:100%; overflow:hidden; position:relative; margin: 0px !important; float:left; ');
+    frame.style.backgroundColor = "white";
+    frame.style.border = "solid 2px";
+    frame.style.width = "100%";
+    frame.style.height = "100%";
+    frame.style.overflow = "hidden";
+    frame.style.position = "relative";
+    frame.style.margin = "0px !important";
+    frame.style.float = "left";
+
 
     if (tag == fm_fullWidth) {
-        frame.parentElement.parentElement.parentElement.style.width = '100%';
-        frame.setAttribute('style', 'background-color:white; border : solid 2px; width:100%; height:100%; overflow:hidden; position:relative; margin: 0px !important; float:left; ');
+        notebookCell.style.width = '100%';
     }
     else if (tag == fm_third) {
         //frame.parentElement.parentElement.parentElement.setAttribute('style','width:32%; position:relative; float:left; resize:both; overflow:hidden; height:auto;');
-        frame.parentElement.parentElement.parentElement.style.width = '33.3%';
-        frame.setAttribute('style', 'background-color:white; border : solid 2px; width:100%; height:100%; overflow:hidden; position:relative; margin: 0px !important; float:left; ');
+        notebookCell.style.width = '33.3%';
     }
     else if (tag == fm_twothird) {
-        frame.parentElement.parentElement.parentElement.style.width = '66.6%';
-        frame.setAttribute('style', 'background-color:white; border:solid 2px; width:100%; height:100%; overflow:hidden; position:relative; margin:0px !important;  float:left');
+        notebookCell.style.width = '66.6%';
     }
     else {  //if (tag == fm_half)
-        frame.parentElement.parentElement.parentElement.style.width = '50%';
-        //frame.parentElement.parentElement.parentElement.setAttribute('style', 'width:45%; position:relative; float:left; resize:both; overflow:hidden; height:auto;');
-        frame.setAttribute('style', 'background-color:white; border : solid 2px; width:100%; height:100%; overflow:hidden; position:relative; margin: 0px !important; float:left; ');
+        notebookCell.style.width = '50%';
     }
-
 
     // hide leftside part of the output
     frame.firstElementChild.setAttribute('style', 'display:none;');
@@ -474,6 +473,60 @@ function markdownFunction(markdown: HTMLElement, isBottom: boolean) {
 function graph_responsive(frame: any) {
     frame.firstElementChild.nextElementSibling.setAttribute('style', 'width:100%;overflow: hidden;');
 }
+
+//assumes previous cells already have frames applied
+function setFlushBottom(notebookCellElement: HTMLElement, cell: Cell) {
+
+    let cells = notebookTools.activeNotebookPanel.content.widgets;
+
+    let currentIndex = cells.findIndex((tempCell) => tempCell == cell);
+    let currentLeft = notebookCellElement.clientLeft;
+    let leftCellIndex = -1;
+    for (let i = currentIndex - 1; i >= 0; --i) {
+        if (IsComicCell(cells[i]) && cells[i].node.clientLeft < currentLeft) {
+            leftCellIndex = i;
+            break;
+        }
+    }
+
+    //already on the left side, do nothing
+    if (leftCellIndex < 0) {
+        return;
+    }
+
+    let nextCellIndex = -1;
+
+    for (let i = currentIndex + 1; i < cells.length; ++i) {
+        if (IsComicCell(cells[i])) {
+            nextCellIndex = i;
+            break;
+        }
+    }
+
+    let nextNodeHeight = 0;
+
+    if (nextCellIndex > 0) {
+        let outputWrapperNode = cells[nextCellIndex].node.getElementsByClassName("jp-Cell-outputWrapper").item(0);
+        nextNodeHeight = outputWrapperNode.clientHeight;
+    }
+
+    let heightDiff = notebookCellElement.clientTop + notebookCellElement.clientHeight + nextNodeHeight - (cells[leftCellIndex].node.clientTop + cells[leftCellIndex].node.clientHeight);
+
+    //right side extends farther
+    if (heightDiff) {
+        if (heightDiff > nextNodeHeight / 2) {
+
+            let bottomMargin = (cells[leftCellIndex].node.clientTop + cells[leftCellIndex].node.clientHeight) - (notebookCellElement.clientTop + notebookCellElement.clientHeight);
+
+            notebookCellElement.style.marginBottom = bottomMargin + "px;";
+        }
+        else {
+            cells[leftCellIndex].node.style.marginBottom = heightDiff + "px;"
+        }
+    }
+};
+
+
 
 function findCorrespondingMarkdownCell(cell: Cell): Cell {
     let cells = notebookTools.activeNotebookPanel.content.widgets;
@@ -524,7 +577,7 @@ function getOutputAreaElements(node: HTMLElement) {
 
     var arr = [node.getElementsByClassName('jp-Cell-inputWrapper')];
     var output_arr = [node.getElementsByClassName('jp-Cell-outputWrapper')];
-    var frame = output_arr[0].item(0).getElementsByClassName('jp-OutputArea-child').item(0);
+    var frame = output_arr[0].item(0).getElementsByClassName('jp-OutputArea-child').item(0) as HTMLElement;
     var codecell = arr[0].item(0);
 
     return { arr: arr, output_arr: output_arr, frame: frame, codecell: codecell };
@@ -572,6 +625,8 @@ function formatOutputArea(cell: Cell, showComicView: boolean) {
             //hide markdown cell if we're showing the comic view
             markdownCell.hide();
         }
+
+        setFlushBottom(frame.parentElement.parentElement.parentElement, cell);
     }
     else {  //reset to notebook view
 
