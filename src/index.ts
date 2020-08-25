@@ -47,7 +47,7 @@ const fm_twothird = 'twothird';
 const mouseActionTimeSeparation = 25;
 
 var mouseActionsArray: MouseActions[];
-var notebookTracker: INotebookTracker;
+
 var notebookTools: INotebookTools;
 var startTime: number;
 var csvStr: string;
@@ -130,7 +130,6 @@ const extension: JupyterFrontEndPlugin<void> = {
     activate: (app: JupyterFrontEnd,
         mainMenu: IMainMenu | null,
         notebook: INotebookTools | null,
-        tracker: INotebookTracker
     ) => {
 
         const { commands } = app;
@@ -138,7 +137,6 @@ const extension: JupyterFrontEndPlugin<void> = {
         const intermediate = 'viewmenu:intermediatecommand';
 
         notebookTools = notebook;
-        notebookTracker = tracker;
 
         startTime = Date.now();
         csvStr = "";
@@ -161,12 +159,6 @@ const extension: JupyterFrontEndPlugin<void> = {
         queuedMouseActions = new Array();
 
         NotebookActions.executed.connect(onCellExecute);
-
-        notebookTracker.currentChanged.connect(() => {
-            setTimeout(() => {
-                notebookTracker.currentWidget.node.parentElement.style.width = "1000px";
-            }, 10000);
-        });
 
         commands.addCommand(comicCommand, {
             label: 'Comic Command',
