@@ -7,7 +7,7 @@ import { IMainMenu } from '@jupyterlab/mainmenu';
 //import { PanelLayout, Widget } from '@lumino/widgets';
 
 import {
-    INotebookTools, NotebookActions, NotebookPanel, INotebookModel, Notebook
+    INotebookTools, NotebookActions, NotebookPanel, INotebookModel, Notebook, INotebookTracker
 } from '@jupyterlab/notebook';
 
 import { Cell, CodeCell } from '@jupyterlab/cells';
@@ -47,7 +47,7 @@ const fm_twothird = 'twothird';
 const mouseActionTimeSeparation = 25;
 
 var mouseActionsArray: MouseActions[];
-//var notebookTracker: INotebookTracker;
+var notebookTracker: INotebookTracker;
 var notebookTools: INotebookTools;
 var startTime: number;
 var csvStr: string;
@@ -125,11 +125,12 @@ class MouseActions {
 const extension: JupyterFrontEndPlugin<void> = {
     id: 'ComicConverter',
     //requires: [INotebookTracker],
-    optional: [IMainMenu, INotebookTools],
+    optional: [IMainMenu, INotebookTools, INotebookTracker],
     autoStart: true,
     activate: (app: JupyterFrontEnd,
         mainMenu: IMainMenu | null,
-        notebook: INotebookTools | null
+        notebook: INotebookTools | null,
+        tracker: INotebookTracker
     ) => {
 
         const { commands } = app;
@@ -137,6 +138,7 @@ const extension: JupyterFrontEndPlugin<void> = {
         const intermediate = 'viewmenu:intermediatecommand';
 
         notebookTools = notebook;
+        notebookTracker = tracker;
 
         startTime = Date.now();
         csvStr = "";
@@ -159,7 +161,13 @@ const extension: JupyterFrontEndPlugin<void> = {
         queuedMouseActions = new Array();
 
         NotebookActions.executed.connect(onCellExecute);
-        
+
+        notebookTracker.currentChanged.connect(() => {
+            setTimeout(() => {
+                notebookTracker.currentWidget.node.parentElement.style.width = "1000px";
+            }, 10000);
+        });
+
         commands.addCommand(comicCommand, {
             label: 'Comic Command',
             isToggled: () => showingComic,
