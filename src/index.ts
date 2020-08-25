@@ -39,10 +39,11 @@ const intermediateTag = 'intermediate';
 const imgTag = 'img';
 const md_bottom = 'bottom';
 const md_stack = 'stack';
-const fm_fullWidth = 'full';
+const fm_full = 'full';
 const fm_half = 'half';
 const fm_third = 'third'; 
 const fm_twothird = 'twothird';
+const notebookWidth = "1000px";
 
 const mouseActionTimeSeparation = 25;
 
@@ -164,8 +165,11 @@ const extension: JupyterFrontEndPlugin<void> = {
 
         notebookTracker.currentChanged.connect(() => {
             setTimeout(() => {
-
-                //notebookTracker.currentWidget.node.parentElement.style.width = "1000px";
+                //jp-NotebookPanel-notebook
+                let notebookNode = notebookTracker.currentWidget.node.getElementsByClassName("jp-NotebookPanel-notebook").item(0) as HTMLElement;
+                notebookNode.style.width = notebookWidth;
+                notebookNode.style.minWidth = notebookWidth;
+                notebookNode.style.maxWidth = notebookWidth;
             }, 10000);
         });
 
@@ -369,8 +373,8 @@ function getComicWidth(cell: Cell): string {
         let tags = cell.model.metadata.get('tags') as string[];
 
         if (tags) {
-            if (tags.find((tag) => tag == fm_fullWidth)) {
-                return fm_fullWidth;
+            if (tags.find((tag) => tag == fm_full)) {
+                return fm_full;
             } else if (tags.find((tag) => tag == fm_half)) {
                 return fm_half;
             }
@@ -440,7 +444,7 @@ function set_frameStyle(frame: HTMLElement, tag: string) {
     frame.style.float = "left";
 
 
-    if (tag == fm_fullWidth) {
+    if (tag == fm_full) {
         notebookCell.style.width = '100%';
     }
     else if (tag == fm_third) {
