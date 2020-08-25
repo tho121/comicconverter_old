@@ -520,31 +520,24 @@ function fixComicLayout(notebookCellElement: HTMLElement, cell: Cell) {
         return;
     }
 
-    let nextCellIndex = -1;
-
-    for (let i = currentIndex + 1; i < cells.length; ++i) {
-        if (IsComicCell(cells[i]) && cells[i].model.type == 'code') {
-            nextCellIndex = i;
-            break;
-        }
-    }
-
-    let nextNodeHeight = 0;
-
-    if (nextCellIndex > 0) {
-        let outputWrapperNode = cells[nextCellIndex].node.getElementsByClassName("jp-Cell-outputWrapper").item(0);
-        nextNodeHeight = outputWrapperNode.clientHeight;
-    }
-
-    let heightDiff = notebookCellElement.offsetTop + notebookCellElement.clientHeight + nextNodeHeight - (cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight);
+    let heightDiff = notebookCellElement.offsetTop + notebookCellElement.clientHeight - (cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight);
 
     //right side extends farther
     if (heightDiff > 0) {
-        if (heightDiff > nextNodeHeight / 2) {
+        if (heightDiff > notebookCellElement.clientHeight / 2) {
 
-            let bottomMargin = (cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight) - (notebookCellElement.offsetTop + notebookCellElement.clientHeight) + 1.5;
+            let prevCellIndex = currentIndex;
+            for (let i = currentIndex - 1; i > leftCellIndex; --i) {
+                if (IsComicCell(cells[i]) && cells[i].model.type == 'code' && cells[i].node.offsetLeft == currentLeft) {
+                    prevCellIndex = i;
+                    break;
+                }
+            }
 
-            notebookCellElement.style.marginBottom = "" + bottomMargin + "px";
+            let prevNotebookCellElement = cells[prevCellIndex].node.getElementsByClassName("jp-Cell-outputWrapper").item(0).parentElement;
+            let bottomMargin = ((cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight) - (prevNotebookCellElement.offsetTop + prevNotebookCellElement.clientHeight)) + 0.5;
+
+            prevNotebookCellElement.style.marginBottom = "" + bottomMargin + "px";
         }
         else {
             cells[leftCellIndex].node.style.marginBottom = "" + heightDiff + "px"
