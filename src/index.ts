@@ -35,6 +35,7 @@ import {
 
 const comicTag = 'comic';
 const intermediateTag = 'intermediate';
+const imgTag = 'img';
 const md_bottom = 'bottom';
 const md_stack = 'stack';
 const fm_fullWidth = 'full';
@@ -42,13 +43,12 @@ const fm_half = 'half';
 const fm_third = 'third'; 
 const fm_twothird = 'twothird';
 
-var notebookTools: INotebookTools;
-const img = 'img';
-
 const mouseActionTimeSeparation = 25;
 
 var mouseActionsArray: MouseActions[];
 //var notebookTracker: INotebookTracker;
+var notebookTools: INotebookTools;
+var startTime: number;
 
 var queuedEventsElement: HTMLElement[];
 var queuedMouseActions: string[];
@@ -136,6 +136,8 @@ const extension: JupyterFrontEndPlugin<void> = {
 
         notebookTools = notebook;
 
+        startTime = Date.now();
+
         var toggleButton = new ToggleInputCodeButton();
         app.docRegistry.addWidgetExtension('Notebook', toggleButton);
 
@@ -156,9 +158,11 @@ const extension: JupyterFrontEndPlugin<void> = {
             label: 'Comic Command',
             isToggled: () => showingComic,
             execute: () => {
-                console.log(`Executed ${comicCommand}`);
 
                 showingComic = !showingComic;
+
+                console.log('View Comic:' + showingComic);
+                console.log(Math.floor((Date.now() - startTime) / 1000));
 
                 let cellWidgets = notebook.activeNotebookPanel.content.widgets;
 
@@ -196,7 +200,6 @@ const extension: JupyterFrontEndPlugin<void> = {
                     if (!isComicTag) {
                         //not a comic cell
                         if (showingComic) {
-                            console.log(cell.node);
                             cell.node.style.setProperty('display', 'none');
                         } else {
                             cell.node.style.setProperty('display', '');
@@ -214,9 +217,11 @@ const extension: JupyterFrontEndPlugin<void> = {
             label: 'intermediate',
             isToggled: () => showingIntermediate,
             execute: () => {
-                console.log(`Executed ${intermediate}`);
 
                 showingIntermediate = !showingIntermediate;
+
+                console.log('View Intermediate:' + showingIntermediate);
+                console.log(Math.floor((Date.now() - startTime) / 1000));
 
                 let cellWidgets = notebook.activeNotebookPanel.content.widgets;
 
@@ -251,7 +256,6 @@ function onCellExecute(slot:any, args: {
     cell: Cell;
 }) {
     if (args.cell.model.type == 'code') {
-        console.log("dispatching events");
         setTimeout(function() {
             var codeCell = (<CodeCell>args.cell);
             queuedMouseActions.push(codeCell.model.id);
@@ -360,7 +364,7 @@ function IsImageCell(cell: Cell): boolean {
         let tags = cell.model.metadata.get('tags') as string[];
 
         if (tags) {
-            if (tags.find((tag) => tag == img)) {
+            if (tags.find((tag) => tag == imgTag)) {
                 return true;
             }
         }
@@ -372,11 +376,7 @@ function IsImageCell(cell: Cell): boolean {
 function img_cell_formatting(frame: any, cell: Cell) {
 
     if (IsImageCell(cell)) {
-
         var img = frame.getElementsByClassName('jp-OutputArea-output');
-        console.log('img : ', img);
-        console.log('img[0] : ', img[0]);
-        console.log('img child : ', img[0].firstElementChild);
         img[0].firstElementChild.setAttribute('style', 'width:100%; height:100%; object - fit: cover;');
     }
 }
@@ -417,7 +417,6 @@ function set_frameStyle(frame: HTMLElement, tag: string) {
         notebookCell.style.width = '100%';
     }
     else if (tag == fm_third) {
-        //frame.parentElement.parentElement.parentElement.setAttribute('style','width:32%; position:relative; float:left; resize:both; overflow:hidden; height:auto;');
         notebookCell.style.width = '33.3%';
     }
     else if (tag == fm_twothird) {
@@ -480,10 +479,10 @@ function setFlushBottom(notebookCellElement: HTMLElement, cell: Cell) {
     let cells = notebookTools.activeNotebookPanel.content.widgets;
 
     let currentIndex = cells.findIndex((tempCell) => tempCell == cell);
-    let currentLeft = notebookCellElement.clientLeft;
+    let currentLeft = notebookCellElement.offsetLeft;
     let leftCellIndex = -1;
     for (let i = currentIndex - 1; i >= 0; --i) {
-        if (IsComicCell(cells[i]) && cells[i].node.clientLeft < currentLeft) {
+        if (IsComicCell(cells[i]) && cells[i].model.type == 'code' && cells[i].node.offsetLeft < currentLeft) {
             leftCellIndex = i;
             break;
         }
@@ -497,7 +496,7 @@ function setFlushBottom(notebookCellElement: HTMLElement, cell: Cell) {
     let nextCellIndex = -1;
 
     for (let i = currentIndex + 1; i < cells.length; ++i) {
-        if (IsComicCell(cells[i])) {
+        if (IsComicCell(cells[i]) && cells[i].model.type == 'code') {
             nextCellIndex = i;
             break;
         }
@@ -510,18 +509,20 @@ function setFlushBottom(notebookCellElement: HTMLElement, cell: Cell) {
         nextNodeHeight = outputWrapperNode.clientHeight;
     }
 
-    let heightDiff = notebookCellElement.clientTop + notebookCellElement.clientHeight + nextNodeHeight - (cells[leftCellIndex].node.clientTop + cells[leftCellIndex].node.clientHeight);
+    let heightDiff = notebookCellElement.offsetTop + notebookCellElement.clientHeight + nextNodeHeight - (cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight);
 
     //right side extends farther
-    if (heightDiff) {
+    if (heightDiff > 0) {
         if (heightDiff > nextNodeHeight / 2) {
 
-            let bottomMargin = (cells[leftCellIndex].node.clientTop + cells[leftCellIndex].node.clientHeight) - (notebookCellElement.clientTop + notebookCellElement.clientHeight);
+            let bottomMargin = (cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight) - (notebookCellElement.offsetTop + notebookCellElement.clientHeight) + 1;
 
-            notebookCellElement.style.marginBottom = bottomMargin + "px;";
+            notebookCellElement.style.marginBottom = "" + bottomMargin + "px";
         }
         else {
-            cells[leftCellIndex].node.style.marginBottom = heightDiff + "px;"
+
+            heightDiff += 1;
+            cells[leftCellIndex].node.style.marginBottom = "" + heightDiff + "px"
         }
     }
 };
@@ -590,8 +591,6 @@ function formatOutputArea(cell: Cell, showComicView: boolean) {
     //var output_arr = elements.output_arr;
     var frame = elements.frame;
     var codecell = elements.codecell;
-
-    console.log(codecell);
 
     if (showComicView) {
         cell.show();
@@ -662,13 +661,14 @@ function formatOutputArea(cell: Cell, showComicView: boolean) {
 
 export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel> {
 
-    private previousCell: Cell;
+    //private previousCell: Cell;
 
     createNew(panel: NotebookPanel, context: DocumentRegistry.IContext<INotebookModel>): IDisposable {
 
         let callback = () => {
 
             if (showingComic) {
+
                 var cell = panel.content.activeCell;
 
                 if (cell != null) {
@@ -676,7 +676,7 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
 
                         var elements = getOutputAreaElements(cell.node);
 
-                        var inputArea = elements.arr;
+                        //var inputArea = elements.arr;
                         var frame = elements.frame;
                         var codeArea = elements.codecell;
 
@@ -686,6 +686,9 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
                         if (codeArea.getAttribute('style') == "display: ;") {
                             isCodeShowing = true;
                         }
+
+                        console.log("ToggleInputCodeButton: " + isCodeShowing);
+                        console.log(Math.floor((Date.now() - startTime) / 1000));
 
                         var markdown = findCorrespondingMarkdownCell(cell);
 
@@ -720,24 +723,24 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
                     }
                 }
 
-                if (this.previousCell != null && this.previousCell != cell) {
+                //if (this.previousCell != null && this.previousCell != cell) {
 
-                    var inputArea = [this.previousCell.node.getElementsByClassName('jp-Cell-inputWrapper')];
-                    var codeArea = inputArea[0].item(0);
-                    codeArea.setAttribute("style", "display: none;");
+                //    var inputArea = [this.previousCell.node.getElementsByClassName('jp-Cell-inputWrapper')];
+                //    var codeArea = inputArea[0].item(0);
+                //    codeArea.setAttribute("style", "display: none;");
 
-                    var output_arr = [this.previousCell.node.getElementsByClassName('jp-Cell-outputWrapper')];
+                //    var output_arr = [this.previousCell.node.getElementsByClassName('jp-Cell-outputWrapper')];
 
-                    for (var node of output_arr[0].item(0).getElementsByClassName('jp-OutputArea-child').item(0).children) {
-                        if (node.className == 'annobox') {
+                //    for (var node of output_arr[0].item(0).getElementsByClassName('jp-OutputArea-child').item(0).children) {
+                //        if (node.className == 'annobox') {
 
-                            var currentStyle = node.getAttribute('style').replace("display: none;", "");
-                            node.setAttribute('style', currentStyle);
-                        }
-                    }
-                }
+                //            var currentStyle = node.getAttribute('style').replace("display: none;", "");
+                //            node.setAttribute('style', currentStyle);
+                //        }
+                //    }
+                //}
 
-                this.previousCell = cell;
+                //this.previousCell = cell;
             }
 
         };
@@ -767,6 +770,9 @@ export class ResetButton implements DocumentRegistry.IWidgetExtension<NotebookPa
     createNew(panel: NotebookPanel, context: DocumentRegistry.IContext<INotebookModel>): IDisposable {
 
         let callback = () => {
+
+            console.log("ResetButton");
+            console.log(Math.floor((Date.now() - startTime) / 1000));
 
             let cellId = panel.content.activeCell.model.id;
 
@@ -954,8 +960,6 @@ const recordClick = function (this: HTMLElement, event: MouseEvent): void {
 
     actions.mouseEventType.push(event.type);
     actions.mouseClickTrails.push(getIndexTrail(event.clientX, event.clientY));
-
-    console.log('click function!');
 };
 
 var gRect: DOMRect;
@@ -985,7 +989,6 @@ const recordMouseDown = (event: MouseEvent): void => {
 
 
     actions.mouseEventType.push(event.type);
-    console.log('mousedown function!');
 
     document.addEventListener('mousemove', recordMouseMove);
     document.addEventListener('mouseup', recordDocumentMouseUp);
@@ -1010,7 +1013,6 @@ const recordMouseMove = (event: MouseEvent): void => {
     actions.relativeMousePosYArray.push((event.clientY - rect.top) / rect.height);
 
     actions.mouseEventType.push(event.type);
-    console.log('mousemove function!');
 };
 
 const recordDocumentMouseUp = function (event: MouseEvent): void {
@@ -1032,7 +1034,6 @@ const recordDocumentMouseUp = function (event: MouseEvent): void {
     actions.relativeMousePosYArray.push((event.clientY - rect.top) / rect.height);
 
     actions.mouseEventType.push(event.type);
-    console.log('mouseup function!');
 
     document.removeEventListener('mousemove', recordMouseMove);
     document.removeEventListener('mouseup', recordDocumentMouseUp);
@@ -1082,6 +1083,10 @@ export class CaptureEventsButtonExtension implements DocumentRegistry.IWidgetExt
             isCallingBack = false;
 
             if (panel.content.activeCell.model.type == 'code') {
+
+                console.log("CaptureEventsButtonExtension: Record");
+                console.log(Math.floor((Date.now() - startTime) / 1000));
+
                 var codeCell = (<CodeCell>panel.content.activeCell);
 
                 if (!containsMouseActions(codeCell.model.id)) {
@@ -1116,6 +1121,10 @@ export class CaptureEventsButtonExtension implements DocumentRegistry.IWidgetExt
 
         let stopRecordingCallback = () => {
             if (panel.content.activeCell.model.type == 'code') {
+
+                console.log("CaptureEventsButtonExtension: StopRecord");
+                console.log(Math.floor((Date.now() - startTime) / 1000));
+
                 var codeCell = (<CodeCell>panel.content.activeCell);
 
                 let actions = getMouseActions(codeCell.model.id);
