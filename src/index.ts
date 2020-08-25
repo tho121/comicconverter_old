@@ -27,6 +27,7 @@ import {
     refreshIcon,
     editIcon,
     stopIcon,
+    saveIcon,
 } from '@jupyterlab/ui-components';
 
 /**
@@ -49,6 +50,7 @@ var mouseActionsArray: MouseActions[];
 //var notebookTracker: INotebookTracker;
 var notebookTools: INotebookTools;
 var startTime: number;
+var csvStr: string;
 
 var queuedEventsElement: HTMLElement[];
 var queuedMouseActions: string[];
@@ -137,6 +139,7 @@ const extension: JupyterFrontEndPlugin<void> = {
         notebookTools = notebook;
 
         startTime = Date.now();
+        csvStr = "";
 
         var toggleButton = new ToggleInputCodeButton();
         app.docRegistry.addWidgetExtension('Notebook', toggleButton);
@@ -145,9 +148,12 @@ const extension: JupyterFrontEndPlugin<void> = {
         app.docRegistry.addWidgetExtension('Notebook', resetButton);
         
 
-        var newCaptureEventButtonExtension = new CaptureEventsButtonExtension();
-        app.docRegistry.addWidgetExtension('Notebook', newCaptureEventButtonExtension);
+        var newCaptureEventButton = new CaptureEventsButtonExtension();
+        app.docRegistry.addWidgetExtension('Notebook', newCaptureEventButton);
 
+        var saveCSVButton = new SaveCSVButtonExtension();
+        app.docRegistry.addWidgetExtension('Notebook', saveCSVButton);
+        
         mouseActionsArray = new Array();
         queuedEventsElement = new Array();
         queuedMouseActions = new Array();
@@ -161,8 +167,7 @@ const extension: JupyterFrontEndPlugin<void> = {
 
                 showingComic = !showingComic;
 
-                console.log('View Comic:' + showingComic);
-                console.log(Math.floor((Date.now() - startTime) / 1000));
+                logToCSV('View Comic:' + showingComic);
 
                 let cellWidgets = notebook.activeNotebookPanel.content.widgets;
 
@@ -220,8 +225,7 @@ const extension: JupyterFrontEndPlugin<void> = {
 
                 showingIntermediate = !showingIntermediate;
 
-                console.log('View Intermediate:' + showingIntermediate);
-                console.log(Math.floor((Date.now() - startTime) / 1000));
+                logToCSV('View Intermediate:' + showingIntermediate);
 
                 let cellWidgets = notebook.activeNotebookPanel.content.widgets;
 
@@ -687,8 +691,7 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
                             isCodeShowing = true;
                         }
 
-                        console.log("ToggleInputCodeButton: " + isCodeShowing);
-                        console.log(Math.floor((Date.now() - startTime) / 1000));
+                        logToCSV('ToggleInputCodeButton:' + isCodeShowing);
 
                         var markdown = findCorrespondingMarkdownCell(cell);
 
@@ -771,8 +774,7 @@ export class ResetButton implements DocumentRegistry.IWidgetExtension<NotebookPa
 
         let callback = () => {
 
-            console.log("ResetButton");
-            console.log(Math.floor((Date.now() - startTime) / 1000));
+            logToCSV('ResetButton:');
 
             let cellId = panel.content.activeCell.model.id;
 
@@ -1084,8 +1086,7 @@ export class CaptureEventsButtonExtension implements DocumentRegistry.IWidgetExt
 
             if (panel.content.activeCell.model.type == 'code') {
 
-                console.log("CaptureEventsButtonExtension: Record");
-                console.log(Math.floor((Date.now() - startTime) / 1000));
+                logToCSV('CaptureEventsButtonExtension: Record');
 
                 var codeCell = (<CodeCell>panel.content.activeCell);
 
@@ -1122,8 +1123,7 @@ export class CaptureEventsButtonExtension implements DocumentRegistry.IWidgetExt
         let stopRecordingCallback = () => {
             if (panel.content.activeCell.model.type == 'code') {
 
-                console.log("CaptureEventsButtonExtension: StopRecord");
-                console.log(Math.floor((Date.now() - startTime) / 1000));
+                logToCSV('CaptureEventsButtonExtension: StopRecord');
 
                 var codeCell = (<CodeCell>panel.content.activeCell);
 
@@ -1155,6 +1155,46 @@ export class CaptureEventsButtonExtension implements DocumentRegistry.IWidgetExt
         });
     }
 }
+
+function logToCSV(log: string) {
+
+    let timeStamp = Math.floor((Date.now() - startTime) / 1000);
+
+    console.log(log + " " + timeStamp);
+
+    csvStr += log + "," + timeStamp + ",\n";
+}
+
+export class SaveCSVButtonExtension implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel> {
+
+    createNew(panel: NotebookPanel, context: DocumentRegistry.IContext<INotebookModel>): IDisposable {
+
+        let callback = () => {
+
+            var hiddenElement = document.createElement('a');
+            hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvStr);
+            hiddenElement.target = '_blank';
+            hiddenElement.download = 'output.csv';
+            hiddenElement.click();
+        };
+
+        let recordButton = new ToolbarButton({
+            className: 'saveCSV',
+            icon: saveIcon,
+            onClick: callback,
+            tooltip: 'save csv'
+        });
+
+
+        panel.toolbar.insertItem(4, 'saveCSV', recordButton);
+
+        return new DisposableDelegate(() => {
+            recordButton.dispose();
+        });
+    }
+}
+
+
 
 
 export default extension;
