@@ -136,7 +136,7 @@ const extension: JupyterFrontEndPlugin<void> = {
 
         const { commands } = app;
         const comicCommand = 'viewmenu:command';
-        const intermediate = 'viewmenu:intermediatecommand';
+        const intermediateCommand = 'viewmenu:intermediatecommand';
 
         notebookTools = notebook;
         notebookTracker = tracker;
@@ -176,6 +176,7 @@ const extension: JupyterFrontEndPlugin<void> = {
         commands.addCommand(comicCommand, {
             label: 'Comic Command',
             isToggled: () => showingComic,
+            
             execute: () => {
 
                 showingComic = !showingComic;
@@ -245,7 +246,7 @@ const extension: JupyterFrontEndPlugin<void> = {
 
         let showingIntermediate = false;
 
-        commands.addCommand(intermediate, {
+        commands.addCommand(intermediateCommand, {
             label: 'intermediate',
             isToggled: () => showingIntermediate,
             execute: () => {
@@ -277,8 +278,22 @@ const extension: JupyterFrontEndPlugin<void> = {
 
         if (mainMenu) {
             mainMenu.viewMenu.addGroup([{ command: comicCommand }]);
-            mainMenu.viewMenu.addGroup([{ command: intermediate }]);
+            mainMenu.viewMenu.addGroup([{ command: intermediateCommand }]);
         }
+
+        commands.addKeyBinding({
+            command: comicCommand,
+            args: {},
+            keys: ['Accel C'],
+            selector: '.jp-Notebook'
+        });
+
+        commands.addKeyBinding({
+            command: intermediateCommand,
+            args: {},
+            keys: ['Accel I'],
+            selector: '.jp-Notebook'
+        });
     }
 };
 
