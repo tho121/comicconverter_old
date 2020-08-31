@@ -39,15 +39,16 @@ const intermediateTag = 'intermediate';
 const imgTag = 'img';
 const md_bottom = 'bottom';
 const md_stack = 'stack';
-const fm_fullWidth = 'full';
+const fm_full = 'full';
 const fm_half = 'half';
 const fm_third = 'third'; 
 const fm_twothird = 'twothird';
+const notebookWidth = "1000px";
 
 const mouseActionTimeSeparation = 25;
 
 var mouseActionsArray: MouseActions[];
-
+var notebookTracker: INotebookTracker;
 var notebookTools: INotebookTools;
 var startTime: number;
 var csvStr: string;
@@ -130,6 +131,7 @@ const extension: JupyterFrontEndPlugin<void> = {
     activate: (app: JupyterFrontEnd,
         mainMenu: IMainMenu | null,
         notebook: INotebookTools | null,
+        tracker: INotebookTracker
     ) => {
 
         const { commands } = app;
@@ -137,6 +139,7 @@ const extension: JupyterFrontEndPlugin<void> = {
         const intermediate = 'viewmenu:intermediatecommand';
 
         notebookTools = notebook;
+        notebookTracker = tracker;
 
         startTime = Date.now();
         csvStr = "";
@@ -159,6 +162,16 @@ const extension: JupyterFrontEndPlugin<void> = {
         queuedMouseActions = new Array();
 
         NotebookActions.executed.connect(onCellExecute);
+
+        notebookTracker.currentChanged.connect(() => {
+            setTimeout(() => {
+                //jp-NotebookPanel-notebook
+                let notebookNode = notebookTracker.currentWidget.node.getElementsByClassName("jp-NotebookPanel-notebook").item(0) as HTMLElement;
+                notebookNode.style.width = notebookWidth;
+                notebookNode.style.minWidth = notebookWidth;
+                notebookNode.style.maxWidth = notebookWidth;
+            }, 10000);
+        });
 
         commands.addCommand(comicCommand, {
             label: 'Comic Command',
@@ -208,6 +221,20 @@ const extension: JupyterFrontEndPlugin<void> = {
                             cell.node.style.setProperty('display', 'none');
                         } else {
                             cell.node.style.setProperty('display', '');
+                        }
+                    }
+                }
+
+                if (showingComic) {
+
+                    for (let i = 0; i < cellWidgets.length; ++i) {
+
+                        var cell = cellWidgets[i];
+
+                        if (IsComicCell(cell) && cell.model.type == 'code') {
+                            var elements = getOutputAreaElements(cell.node);
+
+                            fixComicLayout(elements.output_arr[0].item(0).parentElement as HTMLElement, cell);
                         }
                     }
                 }
@@ -346,8 +373,8 @@ function getComicWidth(cell: Cell): string {
         let tags = cell.model.metadata.get('tags') as string[];
 
         if (tags) {
-            if (tags.find((tag) => tag == fm_fullWidth)) {
-                return fm_fullWidth;
+            if (tags.find((tag) => tag == fm_full)) {
+                return fm_full;
             } else if (tags.find((tag) => tag == fm_half)) {
                 return fm_half;
             }
@@ -417,7 +444,7 @@ function set_frameStyle(frame: HTMLElement, tag: string) {
     frame.style.float = "left";
 
 
-    if (tag == fm_fullWidth) {
+    if (tag == fm_full) {
         notebookCell.style.width = '100%';
     }
     else if (tag == fm_third) {
@@ -477,8 +504,8 @@ function graph_responsive(frame: any) {
     frame.firstElementChild.nextElementSibling.setAttribute('style', 'width:100%;overflow: hidden;');
 }
 
-//assumes previous cells already have frames applied
-function setFlushBottom(notebookCellElement: HTMLElement, cell: Cell) {
+//assumes comic frames have been applied to all cells
+function fixComicLayout(notebookCellElement: HTMLElement, cell: Cell) {
 
     let cells = notebookTools.activeNotebookPanel.content.widgets;
 
@@ -497,35 +524,26 @@ function setFlushBottom(notebookCellElement: HTMLElement, cell: Cell) {
         return;
     }
 
-    let nextCellIndex = -1;
-
-    for (let i = currentIndex + 1; i < cells.length; ++i) {
-        if (IsComicCell(cells[i]) && cells[i].model.type == 'code') {
-            nextCellIndex = i;
-            break;
-        }
-    }
-
-    let nextNodeHeight = 0;
-
-    if (nextCellIndex > 0) {
-        let outputWrapperNode = cells[nextCellIndex].node.getElementsByClassName("jp-Cell-outputWrapper").item(0);
-        nextNodeHeight = outputWrapperNode.clientHeight;
-    }
-
-    let heightDiff = notebookCellElement.offsetTop + notebookCellElement.clientHeight + nextNodeHeight - (cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight);
+    let heightDiff = notebookCellElement.offsetTop + notebookCellElement.clientHeight - (cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight);
 
     //right side extends farther
     if (heightDiff > 0) {
-        if (heightDiff > nextNodeHeight / 2) {
+        if (heightDiff > notebookCellElement.clientHeight / 2) {
 
-            let bottomMargin = (cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight) - (notebookCellElement.offsetTop + notebookCellElement.clientHeight) + 1;
+            let prevCellIndex = currentIndex;
+            for (let i = currentIndex - 1; i > leftCellIndex; --i) {
+                if (IsComicCell(cells[i]) && cells[i].model.type == 'code' && cells[i].node.offsetLeft == currentLeft) {
+                    prevCellIndex = i;
+                    break;
+                }
+            }
 
-            notebookCellElement.style.marginBottom = "" + bottomMargin + "px";
+            let prevNotebookCellElement = cells[prevCellIndex].node.getElementsByClassName("jp-Cell-outputWrapper").item(0).parentElement;
+            let bottomMargin = ((cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight) - (prevNotebookCellElement.offsetTop + prevNotebookCellElement.clientHeight)) + 0.5;
+
+            prevNotebookCellElement.style.marginBottom = "" + bottomMargin + "px";
         }
         else {
-
-            heightDiff += 1;
             cells[leftCellIndex].node.style.marginBottom = "" + heightDiff + "px"
         }
     }
@@ -628,8 +646,6 @@ function formatOutputArea(cell: Cell, showComicView: boolean) {
             //hide markdown cell if we're showing the comic view
             markdownCell.hide();
         }
-
-        setFlushBottom(frame.parentElement.parentElement.parentElement, cell);
     }
     else {  //reset to notebook view
 
@@ -667,6 +683,8 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
 
     //private previousCell: Cell;
 
+    private previousMargin = "";
+
     createNew(panel: NotebookPanel, context: DocumentRegistry.IContext<INotebookModel>): IDisposable {
 
         let callback = () => {
@@ -696,6 +714,9 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
                         var markdown = findCorrespondingMarkdownCell(cell);
 
                         if (!isCodeShowing) {   //in comic view, show code
+
+                            this.previousMargin = elements.output_arr[0].item(0).parentElement.style.marginBottom;
+
                             frame.setAttribute('style', '');
                             frame.parentElement.parentElement.parentElement.setAttribute('style', '');
                             frame.firstElementChild.setAttribute('style', 'display:;'); //show prompt
@@ -705,13 +726,13 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
                         else {
                             set_frameStyle(frame, getComicWidth(cell));
                             markdown?.hide();
+
+                            elements.output_arr[0].item(0).parentElement.style.marginBottom = this.previousMargin;
                         }
 
                         isCodeShowing ? codeArea.setAttribute("style", "display: none;") : codeArea.setAttribute("style", "display: ;");
 
-                        var output_arr = [cell.node.getElementsByClassName('jp-Cell-outputWrapper')];
-
-                        for (var node of output_arr[0].item(0).getElementsByClassName('jp-OutputArea-child').item(0).children) {
+                        for (var node of frame.children) {
                             if (node.className == 'annobox') {
 
                                 var currentStyle = node.getAttribute('style');
