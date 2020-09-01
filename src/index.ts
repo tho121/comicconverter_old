@@ -43,7 +43,7 @@ const fm_full = 'full';
 const fm_half = 'half';
 const fm_third = 'third'; 
 const fm_twothird = 'twothird';
-const notebookWidth = "1000px";
+const notebookWidth = "1100px";
 
 const mouseActionTimeSeparation = 25;
 
@@ -284,14 +284,14 @@ const extension: JupyterFrontEndPlugin<void> = {
         commands.addKeyBinding({
             command: comicCommand,
             args: {},
-            keys: ['Accel C'],
+            keys: ['Accel Shift C'],
             selector: '.jp-Notebook'
         });
 
         commands.addKeyBinding({
             command: intermediateCommand,
             args: {},
-            keys: ['Accel I'],
+            keys: ['Accel Shift I'],
             selector: '.jp-Notebook'
         });
     }
@@ -378,11 +378,6 @@ function IsMarkdownStacked(cell: Cell): boolean {
     return false;
 }
 
-
-
-// here you use boolean then i can't not disitinguish tags 
-// i think it should be string 
-// ya i would return a string, change the function to getComicWidth
 function getComicWidth(cell: Cell): string {
     if (cell !== undefined) {
         let tags = cell.model.metadata.get('tags') as string[];
@@ -403,6 +398,23 @@ function getComicWidth(cell: Cell): string {
     }
 
     return;
+}
+
+function getComicHeight(cell: Cell): string {
+    if (cell !== undefined) {
+        let tags = cell.model.metadata.get('tags') as string[];
+
+        if (tags) {
+
+            for (let i = 0; i < tags.length; ++i) {
+                if (tags[i].startsWith("height")) {
+                    return tags[i].split(':')[1];     //should be "height:100px" or some similar number
+                }
+            }
+        }
+    }
+
+    return "";
 }
 
 function IsImageCell(cell: Cell): boolean {
@@ -442,7 +454,7 @@ function IsIntermediateCell(cell: Cell): boolean {
 }
 
 //frame.parentElement.parentElement.parentElement = jp-Notebook-cell
-function set_frameStyle(frame: HTMLElement, tag: string) {
+function set_frameStyle(frame: HTMLElement, widthTag: string, heightTag: string) {
 
     let notebookCell = frame.parentElement.parentElement.parentElement;
 
@@ -459,17 +471,21 @@ function set_frameStyle(frame: HTMLElement, tag: string) {
     frame.style.float = "left";
 
 
-    if (tag == fm_full) {
+    if (widthTag == fm_full) {
         notebookCell.style.width = '100%';
     }
-    else if (tag == fm_third) {
+    else if (widthTag == fm_third) {
         notebookCell.style.width = '33.3%';
     }
-    else if (tag == fm_twothird) {
+    else if (widthTag == fm_twothird) {
         notebookCell.style.width = '66.6%';
     }
     else {  //if (tag == fm_half)
         notebookCell.style.width = '50%';
+    }
+
+    if (heightTag != "") {
+        notebookCell.style.height = heightTag;
     }
 
     // hide leftside part of the output
@@ -545,7 +561,7 @@ function fixComicLayout(notebookCellElement: HTMLElement, cell: Cell) {
     if (heightDiff > 0) {
         if (heightDiff > notebookCellElement.clientHeight / 2) {
 
-            let prevCellIndex = currentIndex;
+            let prevCellIndex = -1;
             for (let i = currentIndex - 1; i > leftCellIndex; --i) {
                 if (IsComicCell(cells[i]) && cells[i].model.type == 'code' && cells[i].node.offsetLeft == currentLeft) {
                     prevCellIndex = i;
@@ -553,10 +569,13 @@ function fixComicLayout(notebookCellElement: HTMLElement, cell: Cell) {
                 }
             }
 
-            let prevNotebookCellElement = cells[prevCellIndex].node.getElementsByClassName("jp-Cell-outputWrapper").item(0).parentElement;
-            let bottomMargin = ((cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight) - (prevNotebookCellElement.offsetTop + prevNotebookCellElement.clientHeight)) + 0.5;
+            if (prevCellIndex > 0) {
+                let prevNotebookCellElement = cells[prevCellIndex].node.getElementsByClassName("jp-Cell-outputWrapper").item(0).parentElement;
+                let bottomMargin = ((cells[leftCellIndex].node.offsetTop + cells[leftCellIndex].node.clientHeight) - (prevNotebookCellElement.offsetTop + prevNotebookCellElement.clientHeight)) + 0.5;
 
-            prevNotebookCellElement.style.marginBottom = "" + bottomMargin + "px";
+                prevNotebookCellElement.style.marginBottom = "" + bottomMargin + "px";
+            }
+            
         }
         else {
             cells[leftCellIndex].node.style.marginBottom = "" + heightDiff + "px"
@@ -632,7 +651,7 @@ function formatOutputArea(cell: Cell, showComicView: boolean) {
     if (showComicView) {
         cell.show();
 
-        set_frameStyle(frame, getComicWidth(cell));
+        set_frameStyle(frame, getComicWidth(cell), getComicHeight(cell));
         hide_matplot_executeResult(frame);
         graph_responsive(frame);
         codecell.setAttribute("style", "display: none;");
@@ -739,7 +758,7 @@ export class ToggleInputCodeButton implements DocumentRegistry.IWidgetExtension<
                             markdown?.show();
                         }
                         else {
-                            set_frameStyle(frame, getComicWidth(cell));
+                            set_frameStyle(frame, getComicWidth(cell), getComicHeight(cell));
                             markdown?.hide();
 
                             elements.output_arr[0].item(0).parentElement.style.marginBottom = this.previousMargin;
