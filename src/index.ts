@@ -43,7 +43,7 @@ const fm_full = 'full';
 const fm_half = 'half';
 const fm_third = 'third'; 
 const fm_twothird = 'twothird';
-const notebookWidth = "1000px";
+const notebookWidth = "1100px";
 
 const mouseActionTimeSeparation = 25;
 
@@ -284,7 +284,7 @@ const extension: JupyterFrontEndPlugin<void> = {
         commands.addKeyBinding({
             command: comicCommand,
             args: {},
-            keys: ['Accel C'],
+            keys: ['Accel T'],
             selector: '.jp-Notebook'
         });
 
