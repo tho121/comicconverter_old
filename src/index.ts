@@ -458,11 +458,12 @@ function set_frameStyle(frame: HTMLElement, widthTag: string, heightTag: string)
 
     let notebookCell = frame.parentElement.parentElement.parentElement;
 
-    notebookCell.setAttribute('style', 'width:100%; position:relative; float:left; resize:both; overflow:hidden; height:auto;');
+    notebookCell.setAttribute('style', 'width:100%; position:relative; float:left; resize:both; overflow:hidden; height:auto; border: 3px solid red; margin:5px');
 
     //frame.setAttribute('style', 'background-color:white; border : solid 2px; width:100%; height:100%; overflow:hidden; position:relative; margin: 0px !important; float:left; ');
+
     frame.style.backgroundColor = "white";
-    frame.style.border = "solid 2px";
+    //frame.style.border = "solid 2px";
     frame.style.width = "100%";
     frame.style.height = "100%";
     frame.style.overflow = "hidden";
@@ -509,7 +510,6 @@ function hide_matplot_executeResult(frame: any) {
             }
         }
     }
-
 };
 
 
@@ -524,7 +524,7 @@ function markdownFunction(markdown: HTMLElement, isBottom: boolean) {
 
     var annotationbox = document.createElement('p');
     annotationbox.innerText = text;
-    annotationbox.style.cssText = "color: black; border:1px solid black; z-index:1; background-color:white; width: auto; height:auto; position:absolute !important; margine:4px; font-size: large;" + verticalPos;
+    annotationbox.style.cssText = "color: black; border:1px solid black; z-index:1; background-color:white; width: auto; height:auto; position:absolute !important; margine:0px; padding:5px; font-size: large; " + verticalPos;
     annotationbox.setAttribute('class', 'annobox');
 
     return annotationbox;
@@ -628,6 +628,7 @@ function findCorrespondingMarkdownCell(cell: Cell): Cell {
 
     return null;
 }
+
 
 
 function getOutputAreaElements(node: HTMLElement) {
